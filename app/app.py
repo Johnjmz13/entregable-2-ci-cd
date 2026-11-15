@@ -1,10 +1,18 @@
 """Aplicación web Flask de la calculadora."""
 
+import os
+import secrets
+
 from flask import Flask, render_template, request
+from flask_wtf.csrf import CSRFProtect
 
 from .calculadora import dividir, multiplicar, restar, sumar
 
 app = Flask(__name__)
+# La clave firma la sesión donde Flask-WTF guarda el token CSRF. Se toma de la
+# variable de entorno SECRET_KEY; si no existe, se genera una aleatoria al iniciar.
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -36,4 +44,4 @@ def index():
 
 
 if __name__ == "__main__":  # pragma: no cover
-    app.run(port=5000, host="0.0.0.0")
+    app.run(port=5000, host="127.0.0.1")

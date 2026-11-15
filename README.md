@@ -31,7 +31,7 @@ Modalidad: individual. Como no hay otro integrante que apruebe, la regla `proteg
 
 Uso como ejemplo Zelena, el proyecto en el que trabajo: una aplicación web en React y Node.js que gestiona operaciones de fulfillment y pagos a operadores sobre Stellar.
 
-- **Unitaria:** prueba una función aislada, sin red, base de datos ni servidor. Ejemplo: la función que calcula la comisión de un pago a un operador debe devolver el valor correcto para montos normales, cero y negativos. En este taller son las pruebas de `tests/test_calculadora.py`.
+- **Unitaria:** prueba una sola función, aislada, sin red, base de datos ni servidor. Ejemplo: la función que calcula la comisión de un pago a un operador debe devolver el valor correcto para montos normales, cero y negativos. En este taller son las pruebas de `tests/test_calculadora.py`.
 - **De componente:** prueba un componente completo (rutas, validaciones y plantilla o respuesta) sin levantar servidores reales ni depender de servicios externos. Ejemplo: llamar al endpoint `POST /orders` con un cliente de pruebas y verificar que responda 400 si falta un campo y 201 si los datos son válidos, simulando la base de datos. En este taller son las de `tests/test_app.py` con el cliente de pruebas de Flask.
 - **De aceptación:** prueba la aplicación como la usaría una persona, en un navegador real y con la app desplegada. Ejemplo: un operador inicia sesión, crea una orden y ve la confirmación en pantalla. En este taller son las de `tests/test_acceptance_app.py` con Selenium, contra el contenedor Docker.
 
@@ -41,7 +41,7 @@ Uso como ejemplo Zelena, el proyecto en el que trabajo: una aplicación web en R
 |---|---|---|
 | `Checkout` | Clona el repositorio con todo el historial (`fetch-depth: 0`). | El runner necesita el código; SonarCloud usa el historial para saber qué código es nuevo. |
 | `Set up Python` | Instala Python 3.13. | Usar la misma versión que en local y en el `Dockerfile`. |
-| `Install dependencies` | Instala `requirements-dev.txt` (que incluye `requirements.txt`). | Tener Flask, los linters y las herramientas de prueba con versiones fijas. |
+| `Install dependencies` | Instala `requirements-dev.txt` con `--require-hashes --only-binary :all:`. | Tener Flask, los linters y las herramientas de prueba en versiones exactas verificadas por hash, sin ejecutar scripts de instalación de terceros. |
 | `Run Black` | `black app --check`. | Detener el pipeline si hay código sin formatear. |
 | `Run Pylint` / `Run Flake8` | Generan `pylint-report.txt` y `flake8-report.txt` con `--exit-zero`. | Los hallazgos no detienen el pipeline: se envían a SonarCloud, que decide con el Quality Gate. Si la herramienta falla, el paso sí falla. |
 | `Run Unit and Component Tests` | Ejecuta pytest sin las pruebas de aceptación y con `--cov-fail-under=80`. | Falla si alguna prueba falla o la cobertura total baja del 80%; genera `coverage.xml`. |
@@ -61,6 +61,12 @@ Uso como ejemplo Zelena, el proyecto en el que trabajo: una aplicación web en R
 - Mi Python local era 3.10 y `pip install -r requirements-dev.txt` falló porque `flake8==7.5.0` exige Python 3.11 o superior. Instalé Python 3.13 (la versión del pipeline y del `Dockerfile`) y creé el entorno virtual con ella. Aprendí que fijar versiones exactas también fija la versión mínima de Python.
 - `docker build` falló al principio con un error de conexión al daemon porque Docker Desktop no estaba abierto. Lo inicié y la imagen se construyó sin cambios en el `Dockerfile`.
 - No tenía Chrome instalado. La primera ejecución de las pruebas de aceptación falló en la primera prueba mientras Selenium Manager descargaba el navegador; las demás pasaron. Al repetirla, las 6 pasaron. En GitHub Actions no pasa porque `ubuntu-latest` ya trae Chrome.
+- El primer análisis de SonarCloud falló el Quality Gate con 11 vulnerabilidades. SonarCloud ahora analiza todo el repositorio (avisó que `sonar.sources` ya no tiene efecto), así que además de `app/` revisó el `Dockerfile` y el workflow. No aparecieron como Security Hotspots para marcar como *Safe*, sino como issues, y los corregí en el código:
+  - `pip install` sin hashes y con posibilidad de ejecutar scripts de instalación: generé `requirements.txt` y `requirements-dev.txt` con hashes a partir de `requirements.in` y `requirements-dev.in` (`uv pip compile --generate-hashes`) e instalo con `--require-hashes --only-binary :all:` en el workflow y en el `Dockerfile`.
+  - Acciones de terceros referenciadas por etiqueta: fijé `sonarqube-scan-action` y `docker/login-action` al SHA del commit.
+  - Contenedor ejecutándose como `root`: agregué un usuario sin privilegios (`USER appuser`).
+  - `app.run` escuchando en `0.0.0.0`: lo cambié a `127.0.0.1` (en Docker la app la sirve Gunicorn).
+  - Protección CSRF deshabilitada: activé `CSRFProtect` de Flask-WTF y agregué el token oculto al formulario. Esto rompió las pruebas de componente, que hacían POST sin token; las ajusté para que primero carguen el formulario y envíen el token, y agregué una prueba que verifica que un POST sin token se rechaza con 400. Además, con 4 workers de Gunicorn cada uno generaba su propia `SECRET_KEY` y el token emitido por un worker no era válido en otro; lo resolví con `--preload`, que carga la app una sola vez antes de crear los workers.
 - Como trabajé solo, no podía aprobar mi propio PR. Configuré la regla con PR obligatorio y el check `build-and-test`, sin aprobaciones requeridas.
 
 ### 5. Ventajas de probar y publicar la misma imagen Docker
