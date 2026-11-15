@@ -32,7 +32,8 @@ jobs:
 
       - name: Install dependencies
         # Versiones exactas verificadas con hash y solo wheels (sin scripts de instalación)
-        run: pip install --require-hashes --only-binary :all: -r requirements-dev.txt
+        run: |
+          pip install --require-hashes --only-binary :all: -r requirements-dev.txt
 
       - name: Run Black (Formatter)
         run: black app --check  # --check solo verifica, no modifica
