@@ -73,3 +73,9 @@ def test_index_post_invalid_numbers(client):
 def test_index_post_sin_token_csrf(client):
     response = client.post("/", data={"num1": "2", "num2": "3", "operacion": "sumar"})
     assert response.status_code == 400
+
+
+def test_index_post_un_numero_invalido(client):
+    response = post_form(client, {"num1": "2", "num2": "abc", "operacion": "sumar"})
+    assert response.status_code == 200
+    assert b"Error: Introduce n\xc3\xbameros v\xc3\xa1lidos" in response.data
