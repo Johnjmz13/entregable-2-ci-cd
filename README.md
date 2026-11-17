@@ -10,12 +10,12 @@ Texto usado en `AUTOR` (`app/calculadora.py`): **John Jimenez**
 |---|---|---|
 | John Jimenez | [@Johnjmz13](https://github.com/Johnjmz13) | Propietario del repositorio |
 
-Modalidad: individual. Como no hay otro integrante que apruebe, la regla `proteger-main` exige Pull Request y el check `build-and-test`, pero con 0 aprobaciones (GitHub no permite aprobar un PR propio).
+Modalidad: individual. Como no hay otro integrante, por indicación del profesor él fue agregado como colaborador y es quien revisa y aprueba el Pull Request. La regla `proteger-main` exige Pull Request con 1 aprobación y el check `build-and-test`.
 
 ## Evidencias
 
-- Pull Request de la sección 9: URL_DEL_PR
-- Ejecución fallida por el error intencional: URL_EJECUCION_FALLIDA
+- Pull Request de la sección 9: https://github.com/Johnjmz13/entregable-2-ci-cd/pull/1
+- Ejecución fallida por el error intencional: https://github.com/Johnjmz13/entregable-2-ci-cd/actions/runs/43697005400
 - Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 ## Respuestas
@@ -67,7 +67,7 @@ Uso como ejemplo Zelena, el proyecto en el que trabajo: una aplicación web en R
   - Contenedor ejecutándose como `root`: agregué un usuario sin privilegios (`USER appuser`).
   - `app.run` escuchando en `0.0.0.0`: lo cambié a `127.0.0.1` (en Docker la app la sirve Gunicorn).
   - Protección CSRF deshabilitada: activé `CSRFProtect` de Flask-WTF y agregué el token oculto al formulario. Esto rompió las pruebas de componente, que hacían POST sin token; las ajusté para que primero carguen el formulario y envíen el token, y agregué una prueba que verifica que un POST sin token se rechaza con 400. Además, con 4 workers de Gunicorn cada uno generaba su propia `SECRET_KEY` y el token emitido por un worker no era válido en otro; lo resolví con `--preload`, que carga la app una sola vez antes de crear los workers.
-- Como trabajé solo, no podía aprobar mi propio PR. Configuré la regla con PR obligatorio y el check `build-and-test`, sin aprobaciones requeridas.
+- Como trabajé solo, no podía aprobar mi propio PR (GitHub no lo permite). Por indicación del profesor, lo agregué como colaborador y él aprobó el PR, así que la regla `proteger-main` quedó con 1 aprobación obligatoria, como pide el taller.
 
 ### 5. Ventajas de probar y publicar la misma imagen Docker
 
@@ -87,7 +87,7 @@ Uso como ejemplo Zelena, el proyecto en el que trabajo: una aplicación web en R
 
 **Con el error intencional** (`restar` devolviendo `a + b`):
 
-- El pipeline falló en **`Run Unit and Component Tests`**: fallaron `test_restar`, `test_restar_negativos` y `test_index_post_restar`.
+- El pipeline falló en **`Run Unit and Component Tests`** ([ejecución fallida](https://github.com/Johnjmz13/entregable-2-ci-cd/actions/runs/43697005400)): fallaron 3 de 17 pruebas, `test_restar`, `test_restar_negativos` y `test_index_post_restar`.
 - **No se ejecutaron** `Build Docker image`, `Start container`, `Run Acceptance Tests`, `SonarCloud Scan`, `Login to Docker Hub` ni `Push Docker image`. Sí se ejecutaron `Show container logs on failure` y `Upload Test Reports Artifacts`, por sus condiciones `failure()` y `always()`.
 - **Cómo se impidió que llegara a `main` y a Docker Hub:** la regla `proteger-main` exige que el check `build-and-test` esté en verde, así que GitHub bloqueó el merge del PR mientras el check estaba fallido. Además, el push a Docker Hub solo ocurre en un push a `main` y si todos los pasos anteriores pasaron; como el PR no se integró y el pipeline se detuvo antes de construir la imagen, no se publicó nada. Al restaurar `return a - b` el pipeline volvió a quedar en verde y solo entonces se pudo hacer el merge.
 
